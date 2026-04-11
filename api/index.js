@@ -3,7 +3,8 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-
+const auth = require("./routes/authRoutes")
+app.use(express.json());
 const DB = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI);
@@ -15,6 +16,8 @@ const DB = async () => {
     }
 } 
 DB();
+app.use("/api/auth", auth);
+
 app.listen(5000, () => {
     console.log("server is running on port 5000");
 })
