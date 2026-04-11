@@ -23,12 +23,12 @@ module.exports.login = async (req, res) => {
 module.exports.register = async (req, res) => {
     const {name, email, password} = req.body;
     try {
+        if(!name || !email || !password) {
+            return res.status(400).json({message: "All fields are required"});
+        }
         const user = await User.findOne({email});
         if(user) {
             return res.status(400).json({message: "User already exists"});
-        }
-        if(!name || !email || !password) {
-            return res.status(400).json({message: "All fields are required"});
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({name, email, password: hashedPassword});

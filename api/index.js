@@ -3,8 +3,10 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const auth = require("./routes/authRoutes")
+const auth = require("./routes/authRoutes");
+const cors = require("cors");
 app.use(express.json());
+app.use(cors());
 const DB = async () => {
     try {
         await mongoose.connect(process.env.MONGO_URI);
