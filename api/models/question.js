@@ -1,11 +1,16 @@
 const mongoose = require("mongoose");
 
 const questionSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+    },
     title: {
         type: String,
         required: true
     },
-    description:{
+    description: {
         type: String,
         required: true,
     },
@@ -18,11 +23,16 @@ const questionSchema = new mongoose.Schema({
         type: [String],
         required: true,
     },
-    topic : {
+    topic: {
         type: [String],
         required: true,
-    }
-},{timestamps: true});
+    },
+    slug: {
+        type: String,
+        unique: true,
+        required: true
+    },
+}, { timestamps: true });
 
 const Question = mongoose.model("Question", questionSchema);
 
