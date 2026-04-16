@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const bcrypt = require("bcrypt");
 const User = require("../models/user");
+const jwt = require("jsonwebtoken");
 
 module.exports.login = async (req, res) => {
     const {email, password} = req.body;
@@ -14,7 +15,10 @@ module.exports.login = async (req, res) => {
         if(!isMatch) {
             return res.status(401).json({message: "Invalid password"});
         }
-        return res.status(200).json({message: "Login successful"});
+        const token = jwt.sign({id: user._id}, process.env.JWT_SECRET);
+        res.cookie("access_token", token, {httpOnly: false});
+
+        return res.status(200).json({message: "Login successful", token});
     } catch (error) {
         return res.status(500).json({message: "Internal server error"});
     }

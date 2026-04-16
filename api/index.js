@@ -6,7 +6,11 @@ const mongoose = require("mongoose");
 const auth = require("./routes/authRoutes");
 const questionRoutes = require("./routes/questionRoutes");
 const cors = require("cors");
+const cookieParser = require('cookie-parser'); 
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); 
+app.use(cookieParser());
 app.use(cors());
 const DB = async () => {
     try {
