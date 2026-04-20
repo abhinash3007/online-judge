@@ -5,6 +5,7 @@ const app = express();
 const mongoose = require("mongoose");
 const auth = require("./routes/authRoutes");
 const questionRoutes = require("./routes/questionRoutes");
+const testCasesRoutes = require("./routes/testCasesRoutes");
 const cors = require("cors");
 const cookieParser = require('cookie-parser'); 
 
@@ -23,8 +24,10 @@ const DB = async () => {
     }
 } 
 DB();
+
 app.use("/api/auth", auth);
 app.use("/api/questions", questionRoutes);
+app.use("/api/testcases", testCasesRoutes);
 
 app.listen(5000, () => {
     console.log("server is running on port 5000");
