@@ -1,16 +1,20 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
-import { useNavigate } from'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch } from 'react-redux'
+import { loginSuccess } from '../utils/authSlice.js'
+
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 const Login = () => {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('bittu@gmail.com')
+  const [password, setPassword] = useState('bittu@3007')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [focused, setFocused] = useState(null)
   const navigate = useNavigate();
-
+  const dispatch = useDispatch();
+  const location = useLocation();
   const isValidEmail = (email) => {
     const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return pattern.test(email);
@@ -18,10 +22,11 @@ const Login = () => {
 
   const handleLogin = async () => {
     try {
-      setLoading(true)
-      setError(null)
-      if(email === '' || password === '' || email.length>50 || password.length > 50) {
-        setError('Please fill in all fields')
+      setLoading(true);
+      setError(null);
+
+      if (email === '' || password === '' || email.length > 50 || password.length > 50) {
+        setError('Please fill in all fields');
         return;
       }
 
@@ -30,18 +35,36 @@ const Login = () => {
         return;
       }
 
-      const response = await axios.post(`${VITE_API_URL}/api/auth/login`, { email, password })
-      console.log('Login successful:', response.data)
-      if(response.status == 200) { 
-        navigate('/');
+      const response = await axios.post(`${VITE_API_URL}/api/auth/login`, {
+        email,
+        password
+      });
+
+      if (response.status === 200) {
+        const token = response.data.token;
+
+        // 1. save token
+        localStorage.setItem("token", token);
+
+        // 2. update redux (IMPORTANT FIX)
+        dispatch(loginSuccess({
+          user: response.data.user || null,
+          token: token,
+        }));
+
+        // 3. navigate AFTER state update
+        // If user came from a protected route, redirect them back there
+        const from = location.state?.from?.pathname || '/';
+        navigate(from);
       }
+
     } catch (err) {
-      console.error('Login failed:', err)
-      setError('Invalid email or password')
+      console.error('Login failed:', err);
+      setError('Invalid email or password');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
 
   return (
