@@ -11,6 +11,8 @@ const groq = new Groq({
 
 const AIReviewUsage = require('../models/aiReviewUsage');
 
+const EXECUTION_URL = process.env.EXECUTION_SERVICE_URL;
+
 module.exports.executeCode = async (req, res) => {
     try {
         const { code, language, input } = req.body;
@@ -29,7 +31,7 @@ module.exports.executeCode = async (req, res) => {
         }
         console.log("Received code execution request:", { language, code, input });
         const response = await axios.post(
-            "http://localhost:8080/code/execute",
+            `${EXECUTION_URL}/code/execute`,
             {
                 code,
                 language,
@@ -100,7 +102,7 @@ module.exports.submitCode = async (req, res) => {
 
         console.log("Converted test cases:", convertedTestCases);
 
-        const response = await axios.post("http://localhost:8080/code/submit", {
+        const response = await axios.post(`${EXECUTION_URL}/code/submit`, {
             code,
             language,
             input: convertedTestCases,   // ← clean plain-text input/output
