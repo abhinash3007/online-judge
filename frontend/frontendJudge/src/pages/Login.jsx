@@ -7,8 +7,8 @@ import { loginSuccess } from '../utils/authSlice.js'
 
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 const Login = () => {
-  const [email, setEmail] = useState('bittu@gmail.com')
-  const [password, setPassword] = useState('bittu@3007')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [focused, setFocused] = useState(null)
