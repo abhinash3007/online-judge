@@ -18,7 +18,7 @@ module.exports.login = async (req, res) => {
         const token = jwt.sign({id: user._id}, process.env.JWT_SECRET);
         res.cookie("access_token", token, {httpOnly: false});
 
-        return res.status(200).json({message: "Login successful", token});
+        return res.status(200).json({message: "Login successful", token, user: {id: user._id, name: user.name, email: user.email}});
     } catch (error) {
         return res.status(500).json({message: "Internal server error"});
     }

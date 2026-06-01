@@ -86,12 +86,12 @@ module.exports.getTestCases = async (req, res) => {
             });
         }
 
-        if (question.user.toString() !== req.user._id.toString()) {
-            return res.status(403).json({
-                success: false,
-                message: "Unauthorized",
-            });
-        }
+        // if (question.user.toString() !== req.user._id.toString()) {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: "Unauthorized",
+        //     });
+        // }
 
         const testCases = await TestCase.find({ problemId }).skip(skip).limit(limit);
 

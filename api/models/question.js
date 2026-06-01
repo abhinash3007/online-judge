@@ -19,6 +19,14 @@ const questionSchema = new mongoose.Schema({
         required: true,
         enum: ["easy", "medium", "hard"],
     },
+    inputFormat: {
+        type: String,
+        required: true,
+    },
+    outputFormat: {
+        type: String,
+        required: true,
+    },
     constraints: {
         type: [String],
         required: true,
