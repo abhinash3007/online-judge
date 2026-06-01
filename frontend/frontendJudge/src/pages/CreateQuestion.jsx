@@ -22,7 +22,7 @@ const EMPTY_TC = () => ({ input: '', output: '', isHidden: false })
 
 export default function CreateQuestion() {
   const navigate = useNavigate()
-  const VITE_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+  const VITE_API_URL = import.meta.env.VITE_API_URL
 
   const [step, setStep]       = useState(0)
   const [saving, setSaving]   = useState(false)

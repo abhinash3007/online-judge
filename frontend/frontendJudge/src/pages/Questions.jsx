@@ -13,6 +13,8 @@ const Questions = () => {
   const [error, setError]         = useState(null);
   const [search, setSearch]       = useState('');
   const [filter, setFilter]       = useState('all'); // all | easy | medium | hard
+  const VITE_API_URL = import.meta.env.VITE_API_URL
+
 
   useEffect(() => { fetchQuestions(); }, []);
 
@@ -20,7 +22,7 @@ const Questions = () => {
     try {
       setLoading(true);
       setError(null);
-      const res  = await fetch('http://localhost:5000/api/questions/all');
+      const res  = await fetch(`${VITE_API_URL}/api/questions/all`);
       const data = await res.json();
       setQuestions(data.questions || []);   // ✅ fixed: data.questions
       console.log('Fetched questions:', data.questions); // ✅ debug log

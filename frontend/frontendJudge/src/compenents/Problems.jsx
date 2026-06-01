@@ -84,7 +84,7 @@ export default function Problems() {
   const { slug } = useParams()
   const location = useLocation()
   const id = location.state?.questionId
-  const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+  const API = import.meta.env.VITE_API_URL
 
   // ── data ──
   const [problem, setProblem] = useState(null)
