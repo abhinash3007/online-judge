@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { logout } from '../utils/authSlice' // adjust path to your slice
+import api from '../utils/api'
 const NAV_LINKS = [
     { label: 'problems', to: '/questions' },
     { label: 'contests', to: '/contests' },
@@ -33,6 +34,8 @@ export default function Header() {
 
     const handleLogout = () => {
         setDropOpen(false)
+        // Ask the API to clear its cookie; local logout must not depend on the result
+        api.post('/api/auth/logout', null, { withCredentials: true }).catch(() => {})
         dispatch(logout())
         // replace so "Back" can't return to a page that required login
         navigate('/', { replace: true })
