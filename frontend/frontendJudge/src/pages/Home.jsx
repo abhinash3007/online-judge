@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 
 const FEATURES = [
   {
@@ -36,7 +37,7 @@ const FEATURES = [
 
 const STATS = [
   { value: '2.4M+', label: 'Submissions' },
-  { value: '18K+',  label: 'Problems' },
+  { value: '18K+', label: 'Problems' },
   { value: '340K+', label: 'Coders' },
   { value: '99.9%', label: 'Uptime' },
 ]
@@ -61,10 +62,10 @@ int main() {
 }`
 
 const VERDICTS = [
-  { label: 'AC', color: '#22c55e', text: 'Accepted',        time: '0.04s', mem: '3.2 MB' },
-  { label: 'WA', color: '#ef4444', text: 'Wrong Answer',    time: '0.03s', mem: '3.1 MB' },
-  { label: 'TLE', color: '#f97316', text: 'Time Limit',     time: '2.00s', mem: '4.8 MB' },
-  { label: 'AC', color: '#22c55e', text: 'Accepted',        time: '0.06s', mem: '3.4 MB' },
+  { label: 'AC', color: '#22c55e', text: 'Accepted', time: '0.04s', mem: '3.2 MB' },
+  { label: 'WA', color: '#ef4444', text: 'Wrong Answer', time: '0.03s', mem: '3.1 MB' },
+  { label: 'TLE', color: '#f97316', text: 'Time Limit', time: '2.00s', mem: '4.8 MB' },
+  { label: 'AC', color: '#22c55e', text: 'Accepted', time: '0.06s', mem: '3.4 MB' },
 ]
 
 export default function Home() {
@@ -72,6 +73,8 @@ export default function Home() {
   const [typed, setTyped] = useState('')
   const [visibleFeatures, setVisibleFeatures] = useState([])
   const featuresRef = useRef(null)
+
+  const isLoggedIn = useSelector((s) => s.auth.isAuthenticated)
 
   // Particle canvas
   useEffect(() => {
@@ -109,12 +112,12 @@ export default function Home() {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x
           const dy = particles[i].y - particles[j].y
-          const dist = Math.sqrt(dx*dx + dy*dy)
+          const dist = Math.sqrt(dx * dx + dy * dy)
           if (dist < 120) {
             ctx.beginPath()
             ctx.moveTo(particles[i].x, particles[i].y)
             ctx.lineTo(particles[j].x, particles[j].y)
-            ctx.strokeStyle = `rgba(91,110,245,${0.08 * (1 - dist/120)})`
+            ctx.strokeStyle = `rgba(91,110,245,${0.08 * (1 - dist / 120)})`
             ctx.lineWidth = 0.5
             ctx.stroke()
           }
@@ -609,7 +612,7 @@ export default function Home() {
               Submit your solution. Get a verdict in milliseconds.
             </p>
             <div className="hero-actions">
-              <Link to="/register" className="btn-primary">
+              <Link to="/questions" className="btn-primary">
                 Start Solving
                 <span>→</span>
               </Link>
@@ -643,7 +646,7 @@ export default function Home() {
               CPU cycles, memory, and wall time — all measured precisely.
               No waiting. No queuing during off-peak. Always instant.
             </p>
-            <Link to="/register" className="btn-primary" style={{ display: 'inline-flex' }}>
+            <Link to="/questions" className="btn-primary" style={{ display: 'inline-flex' }}>
               Try it free
             </Link>
           </div>
@@ -722,8 +725,20 @@ export default function Home() {
               and climb the global leaderboard every day.
             </p>
             <div style={{ display: 'flex', gap: '14px', justifyContent: 'center' }}>
-              <Link to="/register" className="btn-primary">Create Free Account</Link>
-              <Link to="/login" className="btn-secondary">Sign In</Link>
+              {!isLoggedIn ? (
+                <>
+                  <Link to="/register" className="btn-primary">
+                    Create Free Account
+                  </Link>
+                  <Link to="/login" className="btn-secondary">
+                    Sign In
+                  </Link>
+                </>
+              ) : (
+                <Link to="/questions" className="btn-primary">
+                  Start Solving →
+                </Link>
+              )}
             </div>
           </div>
         </section>

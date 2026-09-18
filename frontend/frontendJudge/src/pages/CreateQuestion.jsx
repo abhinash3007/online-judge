@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import api from '../utils/api'
 
 const DIFFICULTIES = ['easy', 'medium', 'hard']
 const DIFF_META = {
@@ -22,7 +22,6 @@ const EMPTY_TC = () => ({ input: '', output: '', isHidden: false })
 
 export default function CreateQuestion() {
   const navigate = useNavigate()
-  const VITE_API_URL = import.meta.env.VITE_API_URL
 
   const [step, setStep]       = useState(0)
   const [saving, setSaving]   = useState(false)
@@ -74,7 +73,7 @@ export default function CreateQuestion() {
     setSaving(true); setError(null)
     try {
       // 1. Create question
-      const qRes = await axios.post(`${VITE_API_URL}/api/questions/create`, {
+      const qRes = await api.post('/api/questions/create', {
         title,
         description,
         difficulty,
@@ -82,24 +81,32 @@ export default function CreateQuestion() {
         topic: topics,
         inputFormat,
         outputFormat,
-      }, { withCredentials: true })
+      })
 
       const qId = qRes.data.question._id
       setCreatedId(qId)
 
       // 2. Create test cases
-      await axios.post(`${VITE_API_URL}/api/testcases/create/${qId}`, {
+      await api.post(`/api/testcases/addTestcases/${qId}`, {
         testCases: testCases.map(tc => ({
           input:    tc.input.trim(),
           output:   tc.output.trim(),
           isHidden: tc.isHidden,
         }))
-      }, { withCredentials: true })
+      })
 
       setSuccess('Problem created successfully!')
       setStep(3)
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong.')
+      const status = err.response?.status
+      if (status === 401) {
+        // api interceptor already cleared the session; ProtectedRoute redirects to /login
+        setError('Your session has expired. Please sign in again.')
+      } else if (status === 403) {
+        setError('You are not allowed to modify this problem.')
+      } else {
+        setError(err.response?.data?.message || 'Something went wrong.')
+      }
     } finally {
       setSaving(false)
     }

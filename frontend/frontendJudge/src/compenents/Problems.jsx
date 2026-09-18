@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react'
-import { useParams, Link, useLocation } from 'react-router-dom'
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSelector } from "react-redux";
 
-import axios from 'axios'
+import api from '../utils/api'
 import Editor from '@monaco-editor/react'
 
 const LANGUAGES = [
@@ -83,8 +83,8 @@ function toPlainOutput(raw) {
 export default function Problems() {
   const { slug } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const id = location.state?.questionId
-  const API = import.meta.env.VITE_API_URL
 
   // ── data ──
   const [problem, setProblem] = useState(null)
@@ -121,7 +121,22 @@ export default function Problems() {
   const wrapRef = useRef(null)
 
 
-const token = useSelector((state) => state.auth.token);
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated && Boolean(state.auth.token))
+
+  // Run / submit / review need a logged-in user. Send guests to login and bring
+  // them back here (with router state, which carries questionId).
+  const redirectToLogin = () => navigate('/login', { state: { from: location } })
+  const requireLogin = () => {
+    if (isAuthenticated) return true
+    redirectToLogin()
+    return false
+  }
+  // The api client already cleared the session on 401; just send the user to login.
+  const handleUnauthorized = (err) => {
+    if (err.response?.status !== 401) return false
+    redirectToLogin()
+    return true
+  }
 
   // ── fetch problem + test cases ──
   useEffect(() => {
@@ -130,11 +145,10 @@ const token = useSelector((state) => state.auth.token);
       setLoading(true)
       try {
         const [pRes, tcRes] = await Promise.all([
-          axios.get(`${API}/api/questions/${id}`),
-          axios.get(`${API}/api/testcases/getTestCases/${id}`),
+          api.get(`/api/questions/${id}`),
+          api.get(`/api/testcases/getTestCases/${id}`),
         ])
         setProblem(pRes?.data?.question || null)
-        console.log("Token:", token);
         setTestCases(Array.isArray(tcRes?.data?.testCases) ? tcRes.data.testCases : [])
       } catch (err) {
         console.error('fetch error:', err)
@@ -169,6 +183,7 @@ const token = useSelector((state) => state.auth.token);
 
   // ── RUN against visible test cases ──
   const handleRun = async () => {
+    if (!requireLogin()) return
     setRunning(true)
     setTab('results')
     setRunOutput(null)
@@ -183,17 +198,12 @@ const token = useSelector((state) => state.auth.token);
           const plainIn = toPlainInput(tc.input)
           const plainOut = toPlainOutput(tc.output)
 
-          const { data } = await axios.post(`${API}/api/code/run`, {
+          const { data } = await api.post('/api/code/run', {
             language: lang,
             code: cleanCode,
             input: plainIn,
             expectedOutput: plainOut,
-          },
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            })
+          })
 
           const got = (data.output || '').trim()
           const isAccepted = data.verdict === 'AC' || got === plainOut.trim()
@@ -207,6 +217,7 @@ const token = useSelector((state) => state.auth.token);
             mem: data.memoryUsed || '—',
           }
         } catch (err) {
+          if (err.response?.status === 401) throw err
           return {
             verdict: 'CE',
             input: tc.input,
@@ -218,6 +229,7 @@ const token = useSelector((state) => state.auth.token);
       }))
       setRunOutput(outputs)
     } catch (err) {
+      if (handleUnauthorized(err)) return
       console.error('run error:', err)
     } finally {
       setRunning(false)
@@ -226,23 +238,20 @@ const token = useSelector((state) => state.auth.token);
 
   // ── SUBMIT ──
   const handleSubmit = async () => {
+    if (!requireLogin()) return
     setSubmitting(true)
     setTab('results')
     setResults(null)
     setRunOutput(null)
     try {
-      const { data } = await axios.post(`${API}/api/code/submit`, {
+      const { data } = await api.post('/api/code/submit', {
         language: lang,
         code,
         questionId: id,
-      },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+      })
       setResults(data.submissionResult || data)
     } catch (err) {
+      if (handleUnauthorized(err)) return
       console.error('submit error:', err)
       setResults({ verdict: 'CE', passed: 0, total: testCases.length })
     } finally {
@@ -252,21 +261,17 @@ const token = useSelector((state) => state.auth.token);
 
   // ── CUSTOM RUN ──
   const handleCustomRun = async () => {
+    if (!requireLogin()) return
     setCustomRunning(true)
     setCustomOutput(null)
     try {
       const cleanCode = code.replace(/`/g, '')
-      const { data } = await axios.post(`${API}/api/code/run`, {
+      const { data } = await api.post('/api/code/run', {
         language: lang,
         code: cleanCode,
         input: customInput,
         expectedOutput: '',
-      },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+      })
       setCustomOutput({
         stdout: data.output || '',
         stderr: data.error || '',
@@ -274,6 +279,7 @@ const token = useSelector((state) => state.auth.token);
         mem: data.memoryUsed || '—',
       })
     } catch (err) {
+      if (handleUnauthorized(err)) return
       setCustomOutput({
         stdout: '',
         stderr: err.response?.data?.error || err.message || 'Execution failed',
@@ -286,22 +292,19 @@ const token = useSelector((state) => state.auth.token);
 
   // ── AI REVIEW ──
   const handleAiReview = async () => {
+    if (!requireLogin()) return
     setAiLoading(true)
     setAiReview(null)
     try {
-      const { data } = await axios.post(`${API}/api/code/review`, {
+      const { data } = await api.post('/api/code/review', {
         code,
         language: lang,
         questionId: id,
         query: aiQuery.trim() || null,
-      },
-    {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+      })
       setAiReview(data)
     } catch (err) {
+      if (handleUnauthorized(err)) return
       setAiReview({ error: err.response?.data?.message || err.message || 'Failed to get AI review' })
     } finally {
       setAiLoading(false)

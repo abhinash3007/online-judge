@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import axios from 'axios'
 
 const Register = () => {
@@ -13,6 +14,7 @@ const Register = () => {
 
   const VITE_API_URL = import.meta.env.VITE_API_URL
   const navigate = useNavigate()
+  const isAuthenticated = useSelector((s) => s.auth.isAuthenticated && Boolean(s.auth.token))
 
   const handleClick = async () => {
     if (!name || !email || !password) {
@@ -24,8 +26,7 @@ const Register = () => {
       setError(null)
       const response = await axios.post(`${VITE_API_URL}/api/auth/register`, { name, email, password })
       if (response.status === 201) {
-        console.log('Registration successful:', response.data)
-        navigate('/')
+        navigate('/login')
       }
     } catch (err) {
       console.error('Registration failed:', err)
@@ -50,6 +51,8 @@ const Register = () => {
   const strength = strengthScore(password)
   const strengthLabels = ['', 'Weak', 'Fair', 'Good', 'Strong']
   const strengthColors = ['', '#ef4444', '#f97316', '#eab308', '#22c55e']
+
+  if (isAuthenticated) return <Navigate to="/" replace />
 
   return (
     <>

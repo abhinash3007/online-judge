@@ -32,8 +32,10 @@ export default function Header() {
     useEffect(() => { setDropOpen(false) }, [location.pathname])
 
     const handleLogout = () => {
+        setDropOpen(false)
         dispatch(logout())
-        navigate('/')
+        // replace so "Back" can't return to a page that required login
+        navigate('/', { replace: true })
     }
 
     // Derived state

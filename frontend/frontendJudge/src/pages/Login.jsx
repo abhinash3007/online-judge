@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import axios from 'axios'
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch } from 'react-redux'
+import { useLocation } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux'
 import { loginSuccess } from '../utils/authSlice.js'
 
 const VITE_API_URL = import.meta.env.VITE_API_URL;
@@ -12,9 +12,9 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [focused, setFocused] = useState(null)
-  const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
+  const isAuthenticated = useSelector((s) => s.auth.isAuthenticated && Boolean(s.auth.token));
   const isValidEmail = (email) => {
     const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return pattern.test(email);
@@ -41,30 +41,45 @@ const Login = () => {
       });
 
       if (response.status === 200) {
-        const token = response.data.token;
-
-        // 1. save token
-        localStorage.setItem("token", token);
-
-        // 2. update redux (IMPORTANT FIX)
+        // Redux (persisted) is the single source of truth for the session.
+        // Once isAuthenticated flips, the <Navigate> below sends the user
+        // back to where they came from.
         dispatch(loginSuccess({
           user: response.data.user || null,
-          token: token,
+          token: response.data.token,
         }));
-
-        // 3. navigate AFTER state update
-        // If user came from a protected route, redirect them back there
-        const from = location.state?.from?.pathname || '/';
-        navigate(from);
       }
 
     } catch (err) {
       console.error('Login failed:', err);
-      setError('Invalid email or password');
+      if (!err.response) {
+        setError('Cannot reach the server. Please try again.');
+      } else if (err.response.status >= 500) {
+        setError('Server error. Please try again later.');
+      } else {
+        setError('Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !loading) handleLogin();
+  };
+
+  // Already signed in (or just signed in): go back to the page that required
+  // login, keeping its router state (e.g. Problems needs state.questionId).
+  if (isAuthenticated) {
+    const from = location.state?.from;
+    return (
+      <Navigate
+        to={from ? `${from.pathname}${from.search || ''}` : '/'}
+        state={from?.state}
+        replace
+      />
+    );
+  }
 
 
   return (
@@ -404,6 +419,7 @@ const Login = () => {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={handleKeyDown}
                 onFocus={() => setFocused('email')}
                 onBlur={() => setFocused(null)}
                 required
@@ -421,6 +437,7 @@ const Login = () => {
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={handleKeyDown}
                 onFocus={() => setFocused('password')}
                 onBlur={() => setFocused(null)}
                 required
