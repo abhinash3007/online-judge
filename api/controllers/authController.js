@@ -24,6 +24,12 @@ module.exports.login = async (req, res) => {
     }
 }
 
+module.exports.logout = (req, res) => {
+    // Must use the same options the cookie was set with, otherwise the browser keeps it
+    res.clearCookie("access_token", {httpOnly: false});
+    return res.status(200).json({message: "Logout successful"});
+}
+
 module.exports.register = async (req, res) => {
     const {name, email, password} = req.body;
     try {
