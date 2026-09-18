@@ -2,9 +2,9 @@ const Question = require("../models/question");
 
 module.exports.createQuestion = async (req, res) => {
     try {
-        const { title, description, difficulty, constraints, topic } = req.body;
+        const { title, description, difficulty, inputFormat, outputFormat, constraints, topic } = req.body;
 
-        if (!title || !description || !difficulty || !constraints || !topic) {
+        if (!title || !description || !difficulty || !inputFormat || !outputFormat || !constraints || !topic) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required",
@@ -25,6 +25,8 @@ module.exports.createQuestion = async (req, res) => {
             title,
             description,
             difficulty,
+            inputFormat,
+            outputFormat,
             constraints,
             topic,
             slug,
@@ -83,7 +85,7 @@ module.exports.getOneQuestion = async (req, res) => {
 module.exports.updateQuestion = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, difficulty, constraints, topic } = req.body;
+        const { title, description, difficulty, inputFormat, outputFormat, constraints, topic } = req.body;
 
         const question = await Question.findById(id);
 
@@ -108,6 +110,8 @@ module.exports.updateQuestion = async (req, res) => {
 
         if (description) question.description = description;
         if (difficulty) question.difficulty = difficulty;
+        if (inputFormat) question.inputFormat = inputFormat;
+        if (outputFormat) question.outputFormat = outputFormat;
         if (constraints) question.constraints = constraints;
         if (topic) question.topic = topic;
 
