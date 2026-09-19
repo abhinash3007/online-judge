@@ -46,12 +46,32 @@ module.exports.executeCode = async (req, res) => {
         });
     }
     catch (error) {
+        // Connection failures on Node 20+ are AggregateErrors with an empty message,
+        // so fall back to the error code / first inner error to keep the cause visible.
+        const detail = error.response?.data?.error
+            || error.response?.data?.message
+            || error.message
+            || error.code
+            || error.errors?.[0]?.message;
+        console.error("executeCode error:", error.response?.status, detail);
         res.status(500).json({
             success: false,
             message: "Error executing code",
-            error: error.message,
+            error: detail,
         });
     }
+};
+
+// Convert one JSON value to stdin text.
+//   scalar          → as-is                          5              → "5"
+//   flat array      → length, then the elements      [1,2,3]        → "3\n1 2 3"
+//   array of arrays → row count, then one row/line   [[1,2],[3,4]]  → "2\n1 2\n3 4"
+const valueToStdin = (v) => {
+    if (!Array.isArray(v)) return String(v);
+    const rows = v.some(Array.isArray)
+        ? v.map(row => (Array.isArray(row) ? row.flat(Infinity).join(' ') : String(row)))
+        : [v.join(' ')];
+    return `${v.length}\n${rows.join('\n')}`;
 };
 
 module.exports.submitCode = async (req, res) => {
@@ -74,10 +94,8 @@ module.exports.submitCode = async (req, res) => {
 
             try {
                 const parsed = JSON.parse(tc.input);
-                // Convert each value: arrays → space-separated, primitives → string
-                plainInput = Object.values(parsed)
-                    .map(val => Array.isArray(val) ? val.join(' ') : String(val))
-                    .join('\n');
+                // Convert each value to stdin text (kept identical to toPlainInput in the frontend's Problems.jsx)
+                plainInput = Object.values(parsed).map(valueToStdin).join('\n');
             } catch (e) {
                 // not JSON, use as-is
                 plainInput = tc.input;
