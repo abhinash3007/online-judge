@@ -17,6 +17,8 @@ const STARTERS = {
 using namespace std;
 
 int main() {
+    // Input: each array is one line of space-separated values, then each number on its own line.
+    // There is no length line - read until end of input (e.g. while (cin >> x)).
     // your code here
     return 0;
 }`,
@@ -24,6 +26,8 @@ int main() {
 
 public class Main {
     public static void main(String[] args) {
+        // Input: each array is one line of space-separated values, then each number on its own line.
+        // There is no length line - read until end of input (e.g. while (sc.hasNextInt())).
         Scanner sc = new Scanner(System.in);
         // your code here
     }
@@ -32,6 +36,8 @@ public class Main {
 input = sys.stdin.readline
 
 def main():
+    # Input: each array is one line of space-separated values, then each number on its own line.
+    # There is no length line - read until end of input (e.g. sys.stdin.read().split()).
     # your code here
     pass
 
@@ -59,13 +65,24 @@ const VERDICT_META = {
   RE: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', label: 'Runtime Error' },
 }
 
-// Convert JSON test case input → plain stdin
+// Convert one JSON value to stdin text.
+//   scalar          → as-is                        5            → "5"
+//   flat array      → length, then the elements    [1,2,3]      → "3\n1 2 3"
+//   array of arrays → row count, then one row/line [[1,2],[3,4]] → "2\n1 2\n3 4"
+// which is the format solutions read with `n = nextInt()` then n more values.
+function valueToStdin(v) {
+  if (!Array.isArray(v)) return String(v)
+  const rows = v.some(Array.isArray)
+    ? v.map(row => (Array.isArray(row) ? row.flat(Infinity).join(' ') : String(row)))
+    : [v.join(' ')]
+  return `${v.length}\n${rows.join('\n')}`
+}
+
+// Convert JSON test case input → plain stdin, e.g. {"nums":[1,2,3,1]} → "4\n1 2 3 1"
 function toPlainInput(raw) {
   try {
     const parsed = JSON.parse(raw)
-    return Object.values(parsed)
-      .map(v => Array.isArray(v) ? v.join(' ') : String(v))
-      .join('\n')
+    return Object.values(parsed).map(valueToStdin).join('\n')
   } catch {
     return raw
   }
@@ -78,6 +95,16 @@ function toPlainOutput(raw) {
     if (Array.isArray(parsed)) return parsed.join(' ')
   } catch { }
   return raw
+}
+
+// Reduce an output to its bare tokens so formatting differences don't count as wrong answers,
+// e.g. "[1, 2]", "[1,2]" and "1 2" all become "1 2".
+function normalizeOutput(s) {
+  return String(s ?? '')
+    .replace(/[[\],]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(' ')
 }
 
 export default function Problems() {
@@ -193,7 +220,9 @@ export default function Problems() {
       const visible = testCases.filter(t => !t.isHidden).slice(0, 3)
       if (!visible.length) { setRunOutput([]); return }
 
-      const outputs = await Promise.all(visible.map(async tc => {
+      // Run cases one at a time: firing them in parallel trips upstream rate limits (HTTP 429).
+      const outputs = []
+      for (const tc of visible) {
         try {
           const plainIn = toPlainInput(tc.input)
           const plainOut = toPlainOutput(tc.output)
@@ -206,27 +235,27 @@ export default function Problems() {
           })
 
           const got = (data.output || '').trim()
-          const isAccepted = data.verdict === 'AC' || got === plainOut.trim()
+          const isAccepted = data.verdict === 'AC' || normalizeOutput(got) === normalizeOutput(plainOut)
 
-          return {
+          outputs.push({
             verdict: isAccepted ? 'AC' : (data.error ? 'CE' : 'WA'),
             input: tc.input,
             expected: tc.output,
             got: got || data.error || 'No output',
             time: data.executionTime || '—',
             mem: data.memoryUsed || '—',
-          }
+          })
         } catch (err) {
           if (err.response?.status === 401) throw err
-          return {
+          outputs.push({
             verdict: 'CE',
             input: tc.input,
             expected: tc.output,
-            got: err.response?.data?.error || err.message || 'Error',
+            got: err.response?.data?.error || err.response?.data?.message || err.message || 'Error',
             time: '—', mem: '—',
-          }
+          })
         }
-      }))
+      }
       setRunOutput(outputs)
     } catch (err) {
       if (handleUnauthorized(err)) return
@@ -246,14 +275,18 @@ export default function Problems() {
     try {
       const { data } = await api.post('/api/code/submit', {
         language: lang,
-        code,
+        code: code.replace(/`/g, ''), // same cleaning as Run, so both compile identical source
         questionId: id,
       })
       setResults(data.submissionResult || data)
     } catch (err) {
       if (handleUnauthorized(err)) return
       console.error('submit error:', err)
-      setResults({ verdict: 'CE', passed: 0, total: testCases.length })
+      // The API forwards the execution service's verdict (RE, TLE, ...) in error.verdict;
+      // only fall back to CE when there is none, so a runtime crash isn't shown as a compile error.
+      const upstream = err.response?.data?.error
+      const verdict = VERDICT_META[upstream?.verdict] ? upstream.verdict : 'CE'
+      setResults({ verdict, passed: 0, total: testCases.length })
     } finally {
       setSubmitting(false)
     }
@@ -269,7 +302,9 @@ export default function Problems() {
       const { data } = await api.post('/api/code/run', {
         language: lang,
         code: cleanCode,
-        input: customInput,
+        // A JSON object like the stored test-case inputs is converted exactly as Run does;
+        // anything else (plain stdin such as "3 2 4\n6", or a bare number) is sent as typed.
+        input: customInput.trim().startsWith('{') ? toPlainInput(customInput) : customInput,
         expectedOutput: '',
       })
       setCustomOutput({
@@ -482,6 +517,19 @@ export default function Problems() {
         }
         .custom-textarea:focus { border-color: rgba(139,92,246,0.4); background: rgba(139,92,246,0.04); }
         .custom-textarea::placeholder { color: rgba(255,255,255,0.15); }
+
+        .custom-hint {
+          font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.6;
+          color: rgba(255,255,255,0.35); margin-bottom: 10px;
+        }
+        .custom-hint code { color: #c084fc; background: rgba(139,92,246,0.1); padding: 1px 5px; border-radius: 4px; }
+        .custom-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; }
+        .custom-chip {
+          font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 4px 10px; border-radius: 6px;
+          background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.5); cursor: pointer; transition: all .2s;
+        }
+        .custom-chip:hover { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); color: #c084fc; }
 
         .btn-custom-run {
           font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
@@ -749,11 +797,31 @@ export default function Problems() {
                         {customRunning ? <><span className="spinner" style={{ color: '#c084fc' }} />Running</> : <>▶ Run Code</>}
                       </button>
                     </div>
+                    <div className="custom-hint">
+                      Type your own input and run your code on it. No expected output is needed:
+                      you just see what your program prints.
+                      {visibleTC[0] && (
+                        <> Use the same format as the examples, e.g. <code>{visibleTC[0].input}</code>, or plain
+                        stdin exactly as your program reads it.</>
+                      )}
+                    </div>
+                    {visibleTC.length > 0 && (
+                      <div className="custom-chips">
+                        <span className="tc-label" style={{ marginBottom: 0 }}>Fill with</span>
+                        {visibleTC.map((tc, i) => (
+                          <button key={i} type="button" className="custom-chip" onClick={() => setCustomInput(tc.input)}>
+                            Example {i + 1}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <textarea
                       className="custom-textarea"
                       value={customInput}
                       onChange={e => setCustomInput(e.target.value)}
-                      placeholder={`Enter stdin directly:\n\n2 7 11 15\n9`}
+                      placeholder={visibleTC[0]
+                        ? `Enter your input, e.g.\n${visibleTC[0].input}\n\nor plain stdin, e.g.\n${toPlainInput(visibleTC[0].input)}`
+                        : 'Enter the input exactly as your program reads it from stdin.'}
                       spellCheck={false}
                     />
                   </div>
