@@ -136,6 +136,29 @@ module.exports.submitCode = async (req, res) => {
         });
         await newSubmission.save();
 
+        let pointsAwarded = 0;
+        if (question.difficulty === 'easy') {
+            pointsAwarded = 10;
+        } else if (question.difficulty === 'medium') {
+            pointsAwarded = 20;
+        } else if (question.difficulty === 'hard') {
+            pointsAwarded = 30;
+        }
+
+        // Update the logged-in user in place (req.user is already a User document, so no import or
+        // new document is needed). Every submission counts; points and "solved" only on the first AC.
+        req.user.totalSubmissions = (req.user.totalSubmissions || 0) + 1;
+
+        if (response.data.verdict === 'AC') {
+            // Add the question to the user's solved problems if not already present
+            if (!req.user.solvedProblems.includes(questionId)) {
+                req.user.correctSubmissions = (req.user.correctSubmissions || 0) + 1;
+                req.user.points = (req.user.points || 0) + pointsAwarded;
+                req.user.solvedProblems.push(questionId);
+            }
+        }
+        await req.user.save();
+
         res.status(200).json({
             success: true,
             message: "Code submitted successfully",
