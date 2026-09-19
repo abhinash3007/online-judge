@@ -4,6 +4,7 @@ import Register from './pages/Register'
 import Home from './pages/Home'
 import Questions from './pages/Questions'
 import CreateQuestion from './pages/CreateQuestion'
+import Profile from './pages/Profile'
 import ProtectedRoute from './compenents/ProtectedRoute'
 import Problems from './compenents/Problems'
 import { Route, Routes } from 'react-router-dom'
@@ -24,7 +25,8 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path='/create-question' element={<CreateQuestion />} />
           {/* <Route path='/edit-question/:id' element={<EditQuestion />} /> */}
-          {/* <Route path='/profile' element={<Profile />} /> */}
+          <Route path='/profile' element={<Profile />} />
+          <Route path='/profile/:id' element={<Profile />} />
         </Route>
       </Routes>
     </>
