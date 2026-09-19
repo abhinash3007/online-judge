@@ -11,12 +11,15 @@ module.exports.executeCode = async (req, res) => {
     const { code, language, input, expectedOutput } = req.body;
     console.log("Received code execution request:", { language, code, input, expectedOutput });
 
+    let filePath;
+    let inputFilePath;
+
     try {
         const fileObj = await generateFilePath(code, language);
-        const filePath = fileObj.filePath;
+        filePath = fileObj.filePath;
         console.log("Generated file path:", filePath);
 
-        const inputFilePath = await generateInputPath(input);
+        inputFilePath = await generateInputPath(input);
         console.log("Generated input file path:", inputFilePath);
 
         let result;
