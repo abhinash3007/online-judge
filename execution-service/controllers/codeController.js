@@ -7,6 +7,14 @@ const { executeJava } = require('../executors/executeJava');
 const { compileCpp } = require('../executors/cpp/compileCpp');
 const { runCpp } = require('../executors/cpp/runCpp');
 
+// Reduce an output to its bare tokens so formatting differences don't count as wrong answers,
+// e.g. "[1, 2]", "[1,2]" and "1 2" all become "1 2". Same rule as normalizeOutput in the frontend.
+const normalizeOutput = (s) => String(s ?? '')
+    .replace(/[[\],]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(' ');
+
 module.exports.executeCode = async (req, res) => {
     const { code, language, input, expectedOutput } = req.body;
     console.log("Received code execution request:", { language, code, input, expectedOutput });
@@ -170,7 +178,7 @@ module.exports.submitCode = async (req, res) => {
                     });
                 }
 
-                if (actual !== expected) {
+                if (normalizeOutput(actual) !== normalizeOutput(expected)) {
                     return res.json({
                         verdict: 'WA',
                         passed,
