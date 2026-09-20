@@ -40,9 +40,12 @@ module.exports.executeCode = async (req, res) => {
         );
         console.log("Execution service response:", response.data);
 
+        // Forward the verdict too: TLE / RE / CE come back here as a normal 200 with the error text.
         res.status(200).json({
             success: true,
+            verdict: response.data.verdict,
             output: response.data.output,
+            error: response.data.error,
         });
     }
     catch (error) {
@@ -57,9 +60,19 @@ module.exports.executeCode = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Error executing code",
+            verdict: error.response?.data?.verdict,
             error: detail,
         });
     }
+};
+
+// Execution-service verdict → value stored in Submission.status (see the enum in models/submission.js).
+const VERDICT_TO_STATUS = {
+    AC: 'Accepted',
+    WA: 'Wrong Answer',
+    TLE: 'Time Limit Exceeded',
+    RE: 'Runtime Error',
+    CE: 'Compilation Error',
 };
 
 // Convert one JSON value to stdin text.
@@ -131,7 +144,7 @@ module.exports.submitCode = async (req, res) => {
             question: questionId,
             code,
             language,
-            status: response.data.verdict === 'AC' ? 'Accepted' : 'Wrong Answer',
+            status: VERDICT_TO_STATUS[response.data.verdict] || 'Wrong Answer',
             error: response.data.error || null
         });
         await newSubmission.save();

@@ -1,6 +1,7 @@
 const { generateFilePath } = require('../utils/generateFilePath');
 const { generateInputPath } = require('../utils/generateInputPath');
 const { cleanup } = require('../utils/cleanupFilePath');
+const { stripJobDir } = require('../utils/stripJobDir');
 const { executeCpp } = require('../executors/executeCPP');
 const { executePython } = require('../executors/executePython');
 const { executeJava } = require('../executors/executeJava');
@@ -63,9 +64,15 @@ module.exports.executeCode = async (req, res) => {
         });
 
     } catch (err) {
+        // Compile errors, runtime errors and timeouts are judged results, not server failures,
+        // so they get a normal 200 (same as Submit). Anything else is a real server error.
+        if (['CE', 'RE', 'TLE'].includes(err.status)) {
+            return res.json({ verdict: err.status, error: stripJobDir(err.error, filePath) });
+        }
+
         return res.status(500).json({
             verdict: err.status || 'Error',
-            error: err.error || err.message
+            error: stripJobDir(err.error || err.message, filePath)
         });
     }
     finally {
@@ -131,6 +138,7 @@ module.exports.submitCode = async (req, res) => {
     const { code, language, input } = req.body;
 
     let filePath; 
+    let passed = 0;
 
     try {
         const fileObj = await generateFilePath(code, language);
@@ -141,8 +149,6 @@ module.exports.submitCode = async (req, res) => {
         if (language === 'cpp') {
             compiledArtifact = await compileCpp(filePath);
         }
-
-        let passed = 0;
 
         for (const tc of input) {
             let inputPath;
@@ -203,6 +209,17 @@ module.exports.submitCode = async (req, res) => {
         });
 
     } catch (err) {
+        // Compile errors, runtime errors and timeouts are judged results, not server failures:
+        // return them as a normal response so the API can store and show the real verdict.
+        if (['CE', 'RE', 'TLE'].includes(err.status)) {
+            return res.json({
+                verdict: err.status,
+                error: stripJobDir(err.error, filePath),
+                passed,
+                total: input.length
+            });
+        }
+
         return res.status(500).json({
             verdict: 'RE',
             error: err.message

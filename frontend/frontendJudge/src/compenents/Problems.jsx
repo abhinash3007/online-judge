@@ -249,10 +249,12 @@ export default function Problems() {
           })
 
           const got = (data.output || '').trim()
-          const isAccepted = data.verdict === 'AC' || normalizeOutput(got) === normalizeOutput(plainOut)
+          // TLE / RE / CE arrive as a normal response with the verdict and error text
+          const judged = ['TLE', 'RE', 'CE'].includes(data.verdict)
+          const isAccepted = !judged && (data.verdict === 'AC' || normalizeOutput(got) === normalizeOutput(plainOut))
 
           outputs.push({
-            verdict: isAccepted ? 'AC' : (data.error ? 'CE' : 'WA'),
+            verdict: judged ? data.verdict : isAccepted ? 'AC' : (data.error ? 'CE' : 'WA'),
             input: tc.input,
             expected: tc.output,
             got: got || data.error || 'No output',
@@ -261,8 +263,10 @@ export default function Problems() {
           })
         } catch (err) {
           if (err.response?.status === 401) throw err
+          // The API forwards the execution service's verdict (TLE / RE / CE); anything else stays CE.
+          const serverVerdict = err.response?.data?.verdict
           outputs.push({
-            verdict: 'CE',
+            verdict: VERDICT_META[serverVerdict] ? serverVerdict : 'CE',
             input: tc.input,
             expected: tc.output,
             got: err.response?.data?.error || err.response?.data?.message || err.message || 'Error',
@@ -923,6 +927,9 @@ export default function Problems() {
                             <div className="verdict-sub">{results.passed}/{results.total} test cases passed</div>
                           </div>
                         </div>
+                        {results.error && (
+                          <pre className="tc-value" style={{ marginBottom: 20, color: '#f87171', overflowX: 'auto' }}>{results.error}</pre>
+                        )}
                         {results.runtime && (
                           <div className="perf-row">
                             <div className="perf-card">

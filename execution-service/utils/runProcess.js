@@ -1,6 +1,8 @@
 const { spawn } = require('child_process');
 
-const runProcess = (command, args, input, timeLimit = 2000) => {
+const DEFAULT_TIME_LIMIT_MS = 2000;
+
+const runProcess = (command, args, input, timeLimit = DEFAULT_TIME_LIMIT_MS) => {
     return new Promise((resolve, reject) => {
 
         const process = spawn(command, args);
@@ -30,7 +32,7 @@ const runProcess = (command, args, input, timeLimit = 2000) => {
         // TLE handler
         const timer = setTimeout(() => {
             process.kill('SIGKILL');
-            reject({ status: 'TLE' });
+            reject({ status: 'TLE', error: `Time limit exceeded (${timeLimit / 1000}s)` });
         }, timeLimit);
 
         process.on('close', (code) => {
@@ -51,4 +53,4 @@ const runProcess = (command, args, input, timeLimit = 2000) => {
     });
 };
 
-module.exports = { runProcess };
+module.exports = { runProcess, DEFAULT_TIME_LIMIT_MS };
