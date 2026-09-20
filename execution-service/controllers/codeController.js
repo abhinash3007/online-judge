@@ -9,6 +9,10 @@ const { executeJava } = require('../executors/executeJava');
 const { compileCpp } = require('../executors/cpp/compileCpp');
 const { runCpp } = require('../executors/cpp/runCpp');
 
+// Ways a submitted program can fail that are results to show the user (compile error, runtime error,
+// time / memory / output limit exceeded), as opposed to failures of the service itself.
+const JUDGED_FAILURES = ['CE', 'RE', 'TLE', 'MLE', 'OLE'];
+
 // Reduce an output to its bare tokens so formatting differences don't count as wrong answers,
 // e.g. "[1, 2]", "[1,2]" and "1 2" all become "1 2". Same rule as normalizeOutput in the frontend.
 const normalizeOutput = (s) => String(s ?? '')
@@ -70,7 +74,7 @@ module.exports.executeCode = async (req, res) => {
     } catch (err) {
         // Compile errors, runtime errors and timeouts are judged results, not server failures,
         // so they get a normal 200 (same as Submit). Anything else is a real server error.
-        if (['CE', 'RE', 'TLE'].includes(err.status)) {
+        if (JUDGED_FAILURES.includes(err.status)) {
             return res.json({ verdict: err.status, error: stripJobDir(err.error, filePath) });
         }
 
@@ -216,7 +220,7 @@ module.exports.submitCode = async (req, res) => {
     } catch (err) {
         // Compile errors, runtime errors and timeouts are judged results, not server failures:
         // return them as a normal response so the API can store and show the real verdict.
-        if (['CE', 'RE', 'TLE'].includes(err.status)) {
+        if (JUDGED_FAILURES.includes(err.status)) {
             return res.json({
                 verdict: err.status,
                 error: stripJobDir(err.error, filePath),

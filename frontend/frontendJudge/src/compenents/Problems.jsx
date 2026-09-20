@@ -61,6 +61,8 @@ const VERDICT_META = {
   AC: { color: '#22c55e', bg: 'rgba(34,197,94,0.1)', label: 'Accepted' },
   WA: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', label: 'Wrong Answer' },
   TLE: { color: '#f97316', bg: 'rgba(249,115,22,0.1)', label: 'Time Limit Exceeded' },
+  MLE: { color: '#f97316', bg: 'rgba(249,115,22,0.1)', label: 'Memory Limit Exceeded' },
+  OLE: { color: '#f97316', bg: 'rgba(249,115,22,0.1)', label: 'Output Limit Exceeded' },
   CE: { color: '#a855f7', bg: 'rgba(168,85,247,0.1)', label: 'Compile Error' },
   RE: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', label: 'Runtime Error' },
 }
@@ -251,7 +253,7 @@ export default function Problems() {
 
           const got = (data.output || '').trim()
           // TLE / RE / CE arrive as a normal response with the verdict and error text
-          const judged = ['TLE', 'RE', 'CE'].includes(data.verdict)
+          const judged = ['TLE', 'MLE', 'OLE', 'RE', 'CE'].includes(data.verdict)
           const isAccepted = !judged && (data.verdict === 'AC' || normalizeOutput(got) === normalizeOutput(plainOut))
 
           outputs.push({

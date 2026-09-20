@@ -1,24 +1,20 @@
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
 const { runProcess } = require('../utils/runProcess');
+const { compile } = require('../utils/compile');
+const { MEMORY_LIMIT_MB } = require('../utils/limits');
 
 const executeJava = async (filePath, inputPath, timeLimit) => {
     const dir = path.dirname(filePath);
     const input = fs.readFileSync(inputPath, 'utf-8');
 
     // compile
-    await new Promise((resolve, reject) => {
-        exec(`javac ${filePath}`, (err, stdout, stderr) => {
-            if (err) return reject({ status: 'CE', error: stderr });
-            resolve();
-        });
-    });
+    await compile(`javac ${filePath}`);
 
-    // run
+    // run, with the heap capped so a program that allocates without end fails instead of using all the RAM
     return await runProcess(
         'java',
-        ['-cp', dir, 'Main'],
+        [`-Xmx${MEMORY_LIMIT_MB}m`, '-cp', dir, 'Main'],
         input,
         timeLimit
     );

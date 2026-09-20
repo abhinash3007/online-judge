@@ -1,19 +1,12 @@
-const { exec } = require('child_process');
 const path = require('path');
+const { compile } = require('../../utils/compile');
 
-const compileCpp = (filePath) => {
-    return new Promise((resolve, reject) => {
+const compileCpp = async (filePath) => {
+    const dir = path.dirname(filePath);
+    const exePath = path.join(dir, 'a.out');
 
-        const dir = path.dirname(filePath);
-        const exePath = path.join(dir, 'a.out');
-
-        exec(`g++ ${filePath} -o ${exePath}`, (err, stdout, stderr) => {
-            if (err) {
-                return reject({ status: 'CE', error: stderr });
-            }
-            resolve(exePath);
-        });
-    });
+    await compile(`g++ ${filePath} -o ${exePath}`);
+    return exePath;
 };
 
 module.exports = { compileCpp };

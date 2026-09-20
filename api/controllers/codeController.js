@@ -82,6 +82,8 @@ const VERDICT_TO_STATUS = {
     AC: 'Accepted',
     WA: 'Wrong Answer',
     TLE: 'Time Limit Exceeded',
+    MLE: 'Memory Limit Exceeded',
+    OLE: 'Output Limit Exceeded',
     RE: 'Runtime Error',
     CE: 'Compilation Error',
 };
