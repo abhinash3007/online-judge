@@ -6,6 +6,7 @@ import Questions from './pages/Questions'
 import CreateQuestion from './pages/CreateQuestion'
 import Profile from './pages/Profile'
 import Leaderboard from './pages/Leaderboard'
+import Contests from './pages/Contests'
 import ProtectedRoute from './compenents/ProtectedRoute'
 import Problems from './compenents/Problems'
 import { Route, Routes } from 'react-router-dom'
@@ -24,6 +25,7 @@ function App() {
         <Route path='/questions' element={<Questions />} />
         <Route path='/problems/:id' element={<Problems />} />
         <Route path='/leaderboard' element={<Leaderboard />} />
+        <Route path='/contests' element={<Contests />} />
         <Route element={<ProtectedRoute />}>
           <Route path='/create-question' element={<CreateQuestion />} />
           {/* <Route path='/edit-question/:id' element={<EditQuestion />} /> */}
