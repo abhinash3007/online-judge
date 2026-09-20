@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const mongoose = require('mongoose');
 const Question = require('../models/question');
 const Submission = require('../models/submission');
 const TestCase = require('../models/testCase');
@@ -15,7 +16,7 @@ const EXECUTION_URL = process.env.EXECUTION_SERVICE_URL;
 
 module.exports.executeCode = async (req, res) => {
     try {
-        const { code, language, input } = req.body;
+        const { code, language, input, questionId } = req.body;
 
         if (code === undefined) {
             return res.status(400).json({
@@ -30,12 +31,22 @@ module.exports.executeCode = async (req, res) => {
             });
         }
         console.log("Received code execution request:", { language, code, input });
+
+        // Use the question's own time limit. It is looked up here from the id, never taken from the
+        // browser, so users can't raise it. Without a (valid) questionId the service's default applies.
+        let timeLimit;
+        if (questionId && mongoose.isValidObjectId(questionId)) {
+            const question = await Question.findById(questionId).select("timeLimit");
+            timeLimit = question?.timeLimit;
+        }
+
         const response = await axios.post(
             `${EXECUTION_URL}/code/execute`,
             {
                 code,
                 language,
-                input
+                input,
+                timeLimit
             }
         );
         console.log("Execution service response:", response.data);
@@ -137,6 +148,7 @@ module.exports.submitCode = async (req, res) => {
             code,
             language,
             input: convertedTestCases,   // ← clean plain-text input/output
+            timeLimit: question.timeLimit,
         });
 
         const newSubmission = new Submission({

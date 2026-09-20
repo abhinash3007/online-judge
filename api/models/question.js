@@ -35,6 +35,14 @@ const questionSchema = new mongoose.Schema({
         type: [String],
         required: true,
     },
+    // Per-run time limit in seconds (before the per-language allowance the execution service adds).
+    // Questions created before this field existed read back as the default.
+    timeLimit: {
+        type: Number,
+        default: 2,
+        min: 0.5,
+        max: 10,
+    },
     slug: {
         type: String,
         unique: true,

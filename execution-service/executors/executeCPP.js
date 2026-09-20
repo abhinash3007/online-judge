@@ -2,7 +2,7 @@ const { exec } = require('child_process');
 const path = require('path');
 const { runProcess } = require('../utils/runProcess');
 
-const executeCpp = async (filePath, inputPath) => {
+const executeCpp = async (filePath, inputPath, timeLimit) => {
     const dir = path.dirname(filePath);
     const outputExe = path.join(dir, 'a.out');
 
@@ -19,7 +19,7 @@ const executeCpp = async (filePath, inputPath) => {
     const input = fs.readFileSync(inputPath, 'utf-8');
 
     // run
-    return await runProcess(outputExe, [], input);
+    return await runProcess(outputExe, [], input, timeLimit);
 };
 
 module.exports = { executeCpp };

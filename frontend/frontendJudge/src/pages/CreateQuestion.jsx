@@ -18,6 +18,10 @@ const TOPIC_SUGGESTIONS = [
 
 const STEPS = ['Question', 'Formats', 'Test Cases', 'Review']
 
+// Allowed time limit in seconds; the API and the execution service enforce the same range.
+const MIN_TIME_LIMIT = 0.5
+const MAX_TIME_LIMIT = 10
+
 const EMPTY_TC = () => ({ input: '', output: '', isHidden: false })
 
 export default function CreateQuestion() {
@@ -36,6 +40,7 @@ export default function CreateQuestion() {
   const [topicInput,  setTopicInput]  = useState('')
   const [topics,      setTopics]      = useState([])
   const [constraints, setConstraints] = useState([''])
+  const [timeLimit,   setTimeLimit]   = useState('2') // seconds per run; Java/Python get extra time automatically
 
   // Step 1 — Formats
   const [inputFormat,  setInputFormat]  = useState('')
@@ -61,8 +66,13 @@ export default function CreateQuestion() {
   const updateTC = (i, field, val) =>
     setTestCases(testCases.map((tc, idx) => idx === i ? { ...tc, [field]: val } : tc))
 
+  const timeLimitValid = () => {
+    const n = Number(timeLimit)
+    return timeLimit.trim() !== '' && Number.isFinite(n) && n >= MIN_TIME_LIMIT && n <= MAX_TIME_LIMIT
+  }
+
   const stepValid = () => {
-    if (step === 0) return title.trim() && description.trim() && topics.length > 0 && constraints.filter(Boolean).length > 0
+    if (step === 0) return title.trim() && description.trim() && topics.length > 0 && constraints.filter(Boolean).length > 0 && timeLimitValid()
     if (step === 1) return inputFormat.trim() && outputFormat.trim()
     if (step === 2) return testCases.length >= 1 && testCases.every(tc => tc.input.trim() && tc.output.trim())
     return true
@@ -78,6 +88,7 @@ export default function CreateQuestion() {
         description,
         difficulty,
         constraints: constraints.filter(Boolean),
+        timeLimit: Number(timeLimit),
         topic: topics,
         inputFormat,
         outputFormat,
@@ -576,6 +587,23 @@ export default function CreateQuestion() {
               ))}
               <button className="btn-add" onClick={addConstraint}>+ Add constraint</button>
 
+              <div className="section-label" style={{marginTop:24}}>Time limit (seconds)</div>
+              <input
+                className="cq-input"
+                style={{maxWidth:160}}
+                type="number"
+                min={MIN_TIME_LIMIT}
+                max={MAX_TIME_LIMIT}
+                step="0.5"
+                value={timeLimit}
+                onChange={e => setTimeLimit(e.target.value)}
+              />
+              <div style={{fontFamily:'JetBrains Mono,monospace',fontSize:11,lineHeight:1.6,marginTop:8,color: timeLimitValid() ? 'rgba(255,255,255,0.3)' : '#f87171'}}>
+                {timeLimitValid()
+                  ? `Per test case, for C++. Java gets ${Number(timeLimit) * 2}s and Python ${Number(timeLimit) * 3}s.`
+                  : `Enter a number between ${MIN_TIME_LIMIT} and ${MAX_TIME_LIMIT}.`}
+              </div>
+
               <div className="btn-row">
                 <div />
                 <button className="btn-next" disabled={!stepValid()} onClick={() => setStep(1)}>
@@ -747,6 +775,10 @@ export default function CreateQuestion() {
                   {constraints.filter(Boolean).map((c,i) => (
                     <div key={i} style={{fontFamily:'JetBrains Mono,monospace',fontSize:12,color:'rgba(255,255,255,0.4)',borderLeft:'2px solid rgba(139,92,246,0.4)',paddingLeft:10,marginBottom:4}}>{c}</div>
                   ))}
+                </div>
+                <div className="review-item">
+                  <div className="review-lbl">Time limit</div>
+                  <div className="review-val">{timeLimit}s</div>
                 </div>
                 <div className="review-item review-full">
                   <div className="review-lbl">Test Cases ({testCases.length})</div>

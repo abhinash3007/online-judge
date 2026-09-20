@@ -2,6 +2,7 @@ const { generateFilePath } = require('../utils/generateFilePath');
 const { generateInputPath } = require('../utils/generateInputPath');
 const { cleanup } = require('../utils/cleanupFilePath');
 const { stripJobDir } = require('../utils/stripJobDir');
+const { resolveTimeLimit } = require('../utils/timeLimit');
 const { executeCpp } = require('../executors/executeCPP');
 const { executePython } = require('../executors/executePython');
 const { executeJava } = require('../executors/executeJava');
@@ -17,8 +18,11 @@ const normalizeOutput = (s) => String(s ?? '')
     .join(' ');
 
 module.exports.executeCode = async (req, res) => {
-    const { code, language, input, expectedOutput } = req.body;
-    console.log("Received code execution request:", { language, code, input, expectedOutput });
+    const { code, language, input, expectedOutput, timeLimit } = req.body;
+    console.log("Received code execution request:", { language, code, input, expectedOutput, timeLimit });
+
+    // The question's limit in seconds → milliseconds for this language (default, cap and language factor applied)
+    const limitMs = resolveTimeLimit(language, timeLimit);
 
     let filePath;
     let inputFilePath;
@@ -34,11 +38,11 @@ module.exports.executeCode = async (req, res) => {
         let result;
 
         if (language === 'cpp') {
-            result = await executeCpp(filePath, inputFilePath);
+            result = await executeCpp(filePath, inputFilePath, limitMs);
         } else if (language === 'python') {
-            result = await executePython(filePath, inputFilePath);
+            result = await executePython(filePath, inputFilePath, limitMs);
         } else if (language === 'java') {
-            result = await executeJava(filePath, inputFilePath);
+            result = await executeJava(filePath, inputFilePath, limitMs);
         } else {
             return res.status(400).json({ error: 'Unsupported language' });
         }
@@ -135,9 +139,10 @@ module.exports.executeCode = async (req, res) => {
 
 
 module.exports.submitCode = async (req, res) => {
-    const { code, language, input } = req.body;
+    const { code, language, input, timeLimit } = req.body;
+    const limitMs = resolveTimeLimit(language, timeLimit);
 
-    let filePath; 
+    let filePath;
     let passed = 0;
 
     try {
@@ -166,11 +171,11 @@ module.exports.submitCode = async (req, res) => {
                 let result;
 
                 if (language === 'cpp') {
-                    result = await runCpp(compiledArtifact, inputPath);
+                    result = await runCpp(compiledArtifact, inputPath, limitMs);
                 } else if (language === 'python') {
-                    result = await executePython(filePath, inputPath);
+                    result = await executePython(filePath, inputPath, limitMs);
                 } else if (language === 'java') {
-                    result = await executeJava(filePath, inputPath);
+                    result = await executeJava(filePath, inputPath, limitMs);
                 }
 
                 const actual = (result.output || '').trim();

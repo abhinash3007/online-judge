@@ -3,7 +3,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const { runProcess } = require('../utils/runProcess');
 
-const executeJava = async (filePath, inputPath) => {
+const executeJava = async (filePath, inputPath, timeLimit) => {
     const dir = path.dirname(filePath);
     const input = fs.readFileSync(inputPath, 'utf-8');
 
@@ -19,7 +19,8 @@ const executeJava = async (filePath, inputPath) => {
     return await runProcess(
         'java',
         ['-cp', dir, 'Main'],
-        input
+        input,
+        timeLimit
     );
 };
 

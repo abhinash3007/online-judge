@@ -1,14 +1,32 @@
 const Question = require("../models/question");
 
+const MIN_TIME_LIMIT = 0.5;
+const MAX_TIME_LIMIT = 10;
+
+// Returns null when `value` is a usable time limit in seconds, otherwise the error message to send back.
+const timeLimitError = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < MIN_TIME_LIMIT || n > MAX_TIME_LIMIT) {
+        return `Time limit must be a number of seconds between ${MIN_TIME_LIMIT} and ${MAX_TIME_LIMIT}`;
+    }
+    return null;
+};
+
 module.exports.createQuestion = async (req, res) => {
     try {
-        const { title, description, difficulty, inputFormat, outputFormat, constraints, topic } = req.body;
+        const { title, description, difficulty, inputFormat, outputFormat, constraints, topic, timeLimit } = req.body;
 
         if (!title || !description || !difficulty || !inputFormat || !outputFormat || !constraints || !topic) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required",
             });
+        }
+
+        // Optional: left out, the question gets the model's default limit
+        if (timeLimit !== undefined && timeLimit !== "") {
+            const problem = timeLimitError(timeLimit);
+            if (problem) return res.status(400).json({ success: false, message: problem });
         }
 
         const slug = title.trim().toLowerCase().replace(/\s+/g, "-");
@@ -30,6 +48,7 @@ module.exports.createQuestion = async (req, res) => {
             constraints,
             topic,
             slug,
+            ...(timeLimit !== undefined && timeLimit !== "" && { timeLimit: Number(timeLimit) }),
             user: req.user._id,
         });
 
@@ -85,7 +104,7 @@ module.exports.getOneQuestion = async (req, res) => {
 module.exports.updateQuestion = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, difficulty, inputFormat, outputFormat, constraints, topic } = req.body;
+        const { title, description, difficulty, inputFormat, outputFormat, constraints, topic, timeLimit } = req.body;
 
         const question = await Question.findById(id);
 
@@ -114,6 +133,11 @@ module.exports.updateQuestion = async (req, res) => {
         if (outputFormat) question.outputFormat = outputFormat;
         if (constraints) question.constraints = constraints;
         if (topic) question.topic = topic;
+        if (timeLimit !== undefined && timeLimit !== "") {
+            const problem = timeLimitError(timeLimit);
+            if (problem) return res.status(400).json({ success: false, message: problem });
+            question.timeLimit = Number(timeLimit);
+        }
 
         await question.save();
 

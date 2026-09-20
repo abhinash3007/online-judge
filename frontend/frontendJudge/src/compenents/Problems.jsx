@@ -246,6 +246,7 @@ export default function Problems() {
             code: cleanCode,
             input: plainIn,
             expectedOutput: plainOut,
+            questionId: id, // lets the API apply this question's time limit
           })
 
           const got = (data.output || '').trim()
@@ -324,6 +325,7 @@ export default function Problems() {
         // anything else (plain stdin such as "3 2 4\n6", or a bare number) is sent as typed.
         input: customInput.trim().startsWith('{') ? toPlainInput(customInput) : customInput,
         expectedOutput: '',
+        questionId: id, // lets the API apply this question's time limit
       })
       setCustomOutput({
         stdout: data.output || '',
@@ -773,6 +775,11 @@ export default function Problems() {
                       {problem.constraints.map((c, i) => <div className="constraint-item" key={i}>{c}</div>)}
                     </>
                   )}
+
+                  <div className="prob-section-title">Time limit</div>
+                  <div className="constraint-item">
+                    {problem.timeLimit ?? 2}s per test case (C++). Java and Python get proportionally more time.
+                  </div>
                 </>
               )}
 
