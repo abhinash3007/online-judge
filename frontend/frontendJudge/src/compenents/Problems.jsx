@@ -112,6 +112,11 @@ export default function Problems() {
   const location = useLocation()
   const navigate = useNavigate()
   const id = location.state?.questionId
+  // A past submission opened from the profile page: its code and language start in the editor.
+  // Ignored when its language isn't one the editor supports (e.g. javascript).
+  const preloaded = LANGUAGES.some(l => l.id === location.state?.submission?.language)
+    ? location.state.submission
+    : null
 
   // ── data ──
   const [problem, setProblem] = useState(null)
@@ -119,8 +124,13 @@ export default function Problems() {
   const [loading, setLoading] = useState(true)
 
   // ── editor ──
-  const [lang, setLang] = useState('cpp')
-  const [code, setCode] = useState(STARTERS.cpp)
+  const [lang, setLang] = useState(preloaded?.language ?? 'cpp')
+  const [code, setCode] = useState(preloaded?.code ?? STARTERS[preloaded?.language ?? 'cpp'])
+  // True only while the editor still holds the untouched submission.
+  const showingSubmission = Boolean(preloaded) && lang === preloaded.language && code === preloaded.code
+  // Language the editor content was last set for. Lets the effect below skip the initial run
+  // (which would otherwise overwrite a preloaded submission with the starter template).
+  const codeLangRef = useRef(lang)
 
   // ── tabs ──
   const [tab, setTab] = useState('description')
@@ -189,7 +199,11 @@ export default function Problems() {
   }, [id])
 
   // reset code on language change
-  useEffect(() => { setCode(STARTERS[lang]) }, [lang])
+  useEffect(() => {
+    if (codeLangRef.current === lang) return
+    codeLangRef.current = lang
+    setCode(STARTERS[lang])
+  }, [lang])
 
   // drag handler
   useEffect(() => {
@@ -1059,6 +1073,11 @@ export default function Problems() {
               <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, color: 'rgba(255,255,255,0.2)', marginLeft: 8 }}>
                 solution.{lang === 'python' ? 'py' : lang === 'java' ? 'java' : lang === 'go' ? 'go' : 'cpp'}
               </span>
+              {showingSubmission && preloaded && (
+                <span style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 11, color: '#c084fc', marginLeft: 8 }}>
+                  · your submission{preloaded.status ? ` (${preloaded.status})` : ''}
+                </span>
+              )}
             </div>
 
             <Editor

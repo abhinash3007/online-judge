@@ -3,6 +3,20 @@ import { Link, useParams } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import api from '../utils/api'
 
+const RECENT_LIMIT = 10
+
+const STATUS_META = {
+  'Accepted': { color: '#22c55e', bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.25)' },
+  'Wrong Answer': { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.25)' },
+  'Runtime Error': { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.25)' },
+  'Time Limit Exceeded': { color: '#f97316', bg: 'rgba(249,115,22,0.1)', border: 'rgba(249,115,22,0.25)' },
+  'Compilation Error': { color: '#a855f7', bg: 'rgba(168,85,247,0.1)', border: 'rgba(168,85,247,0.25)' },
+}
+const DEFAULT_STATUS = { color: 'rgba(255,255,255,0.5)', bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.12)' }
+
+const formatDate = iso =>
+  new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
 // /profile        → the logged-in user's own profile
 // /profile/:id    → any user's profile, loaded from GET /api/auth/getUser/:id
 const Profile = () => {
@@ -37,6 +51,30 @@ const Profile = () => {
       })
     return () => { cancelled = true }
   }, [userId])
+
+  // Recent submissions. GET /api/submissions/user/:id returns the *logged-in* user's submissions
+  // whatever :id is, so they are only fetched and shown on your own profile.
+  const [subs, setSubs] = useState({ id: null, list: [], error: null })
+
+  useEffect(() => {
+    if (!isOwn) return
+
+    let cancelled = false
+    api.get(`/api/submissions/user/${userId}`)
+      .then(({ data }) => {
+        if (!cancelled) setSubs({ id: userId, list: data.submissions || [], error: null })
+      })
+      .catch(err => {
+        if (cancelled) return
+        console.error('getUserSubmissions error:', err)
+        setSubs({ id: userId, list: [], error: err.response?.data?.message || 'Failed to load submissions.' })
+      })
+    return () => { cancelled = true }
+  }, [isOwn, userId])
+
+  const subsLoading = isOwn && subs.id !== userId
+  const recentSubs = subs.id === userId ? subs.list.slice(0, RECENT_LIMIT) : []
+  const subsError = subs.id === userId ? subs.error : null
 
   const loading = Boolean(userId) && result.id !== userId
   const user = result.id === userId ? result.user : null
@@ -120,6 +158,36 @@ const Profile = () => {
         }
         .pf-link:hover { color: #c084fc; border-color: rgba(139,92,246,0.4); background: rgba(139,92,246,0.07); }
 
+        .pf-subs { margin-top: 16px; }
+        .pf-section-title {
+          font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .08em;
+          text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 12px;
+        }
+        .pf-sub {
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .pf-sub-main { min-width: 0; }
+        .pf-sub-title {
+          font-size: 14px; font-weight: 700; color: #f0f0f8; text-decoration: none;
+          display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        a.pf-sub-title:hover { color: #c084fc; }
+        .pf-sub-title.gone { color: rgba(255,255,255,0.3); font-weight: 400; }
+        .pf-sub-meta {
+          font-family: 'JetBrains Mono', monospace; font-size: 11px;
+          color: rgba(255,255,255,0.3); margin-top: 3px;
+        }
+        .pf-status {
+          font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+          padding: 3px 10px; border-radius: 999px; border: 1px solid; white-space: nowrap; flex-shrink: 0;
+        }
+        .pf-empty {
+          font-family: 'JetBrains Mono', monospace; font-size: 12px;
+          color: rgba(255,255,255,0.35); padding: 10px 0;
+        }
+        .pf-empty.error { color: #f87171; }
+
         .pf-state {
           text-align: center; padding: 60px 0;
           font-family: 'JetBrains Mono', monospace; font-size: 13px; color: rgba(255,255,255,0.35);
@@ -179,8 +247,47 @@ const Profile = () => {
 
               <div className="pf-actions">
                 <Link to="/questions" className="pf-link">Browse problems</Link>
-                {isOwn && <Link to="/submissions" className="pf-link">My submissions</Link>}
               </div>
+            </div>
+          )}
+
+          {!loading && !error && user && isOwn && (
+            <div className="pf-card pf-subs">
+              <div className="pf-section-title">My submissions</div>
+
+              {subsLoading && <div className="pf-empty">loading submissions...</div>}
+              {!subsLoading && subsError && <div className="pf-empty error">{subsError}</div>}
+              {!subsLoading && !subsError && recentSubs.length === 0 && (
+                <div className="pf-empty">
+                  No submissions yet. <Link to="/questions" style={{ color: '#c084fc' }}>Solve a problem</Link> to see it here.
+                </div>
+              )}
+
+              {!subsLoading && recentSubs.map(s => {
+                const meta = STATUS_META[s.status] || DEFAULT_STATUS
+                const q = s.question
+                return (
+                  <div className="pf-sub" key={s._id}>
+                    <div className="pf-sub-main">
+                      {q ? (
+                        <Link
+                          to={`/problems/${q.slug}`}
+                          state={{ questionId: q._id, submission: { code: s.code, language: s.language, status: s.status } }}
+                          className="pf-sub-title"
+                        >
+                          {q.title}
+                        </Link>
+                      ) : (
+                        <span className="pf-sub-title gone">Deleted problem</span>
+                      )}
+                      <div className="pf-sub-meta">{s.language} · {formatDate(s.createdAt)}</div>
+                    </div>
+                    <span className="pf-status" style={{ color: meta.color, background: meta.bg, borderColor: meta.border }}>
+                      {s.status}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
