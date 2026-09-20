@@ -7,6 +7,7 @@ const auth = require("./routes/authRoutes");
 const questionRoutes = require("./routes/questionRoutes");
 const testCasesRoutes = require("./routes/testCasesRoutes");
 const codeRoutes = require("./routes/codeExeRouter");
+const submissionRoutes = require("./routes/submissionRoute");
 const cors = require("cors");
 const cookieParser = require('cookie-parser'); 
 const { all } = require("axios");
@@ -15,7 +16,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
 app.use(cookieParser());
 app.use(cors({
-    origin: "https://online-judge-six-zeta.vercel.app",
+    origin: ["https://online-judge-six-zeta.vercel.app", "http://localhost:5173"],
     credentials: true
 }));
 const DB = async () => {
@@ -34,6 +35,7 @@ app.use("/api/auth", auth);
 app.use("/api/questions", questionRoutes);
 app.use("/api/testcases", testCasesRoutes);
 app.use("/api/code", codeRoutes);
+app.use("/api/submissions", submissionRoutes);
 
 app.listen(5000, () => {
     console.log("server is running on port 5000");
